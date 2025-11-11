@@ -16,13 +16,9 @@ def create_default_presets():
             {
                 "title": "Bienvenue au collège !",
                 "content": "Consultez cet écran régulièrement pour rester informé des actualités et événements du collège.",
-                "order": 1
+                "order": 1,
+                "type": "normal"
             },
-            {
-                "title": "Horaires du collège",
-                "content": "Lundi - Vendredi: 8h00 - 17h00\nMercredi: 8h00 - 12h00\n\nAccueil ouvert dès 7h45",
-                "order": 2
-            }
         ]
         for i, preset in enumerate(presets):
             with open(f"{PRESET_DIR}/preset_{i+1}.json", "w", encoding="utf-8") as f:
@@ -44,7 +40,7 @@ BLUE_BG = (224, 242, 254)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 BORDER_COLOR = (30, 58, 138)
-PROGRESS_COLOR = (16, 185, 129)  # Vert
+PROGRESS_COLOR = (16, 185, 129)
 
 # ================= Limites =================
 MAX_TITLE_CHARS = 100
@@ -105,13 +101,13 @@ def load_slides():
             except:
                 pass
     
-    # >>> PATCH: n'affiche pas la slide par défaut si au moins 1 preset existe
-    if not slides:  
+    if not slides:
         slides = [{
             "title": "Information collège",
             "content": "Aucune slide configurée.\n\nUtilisez l'éditeur web.",
             "duration": 8,
-            "is_preset": False
+            "is_preset": False,
+            "type": "normal"
         }]
     
     return slides
@@ -144,6 +140,35 @@ def draw_text_wrapped(surface, text, rect, font, color):
         surf = font.render(line, True, color)
         surface.blit(surf, (rect.x + 20, y))
         y += surf.get_height() + 8
+
+def draw_scrolling_list(surface, names_text, rect, font, color, scroll_offset):
+    """Affiche une liste de noms qui défile verticalement"""
+    lines = []
+    for line in names_text.split('\n'):
+        if line.strip():
+            lines.append(line.strip())
+    
+    if not lines:
+        return 0
+    
+    # Calculer la hauteur totale du texte
+    line_height = font.get_height() + 12
+    total_height = len(lines) * line_height
+    
+    # Créer une surface temporaire pour le texte
+    text_surface = pygame.Surface((rect.width, total_height + rect.height), pygame.SRCALPHA)
+    
+    y = 0
+    for line in lines:
+        surf = font.render("• " + line, True, color)
+        text_surface.blit(surf, (20, y))
+        y += line_height
+    
+    # Appliquer le scroll
+    source_rect = pygame.Rect(0, scroll_offset, rect.width, rect.height - 40)
+    surface.blit(text_surface, (rect.x, rect.y + 20), source_rect)
+    
+    return total_height
 
 def draw_header():
     """Barre d'en-tête"""
@@ -183,7 +208,7 @@ def draw_progress_bar(progress, duration):
     progress_width = int(W * progress)
     pygame.draw.rect(screen, PROGRESS_COLOR, (0, bar_y, progress_width, bar_height))
 
-def draw_slide_surface(slide):
+def draw_slide_surface(slide, scroll_offset=0):
     """Dessine une slide sur une surface"""
     W, H = screen.get_width(), screen.get_height()
     surface = pygame.Surface((W, H))
@@ -191,10 +216,12 @@ def draw_slide_surface(slide):
     
     title = slide.get("title", "").strip() or "Information collège"
     content = slide.get("content", "").strip()
+    slide_type = slide.get("type", "normal")
     
     content_top = 100
     margin = 40
     
+    # Carré titre
     title_rect = pygame.Rect(margin, content_top, W - margin*2, 100)
     draw_rounded_rect(surface, WHITE, title_rect, 15)
     pygame.draw.rect(surface, BORDER_COLOR, title_rect, 3, border_radius=15)
@@ -204,15 +231,29 @@ def draw_slide_surface(slide):
     title_y = title_rect.y + (title_rect.height - title_surf.get_height()) // 2
     surface.blit(title_surf, (title_rect.x + 20, title_y))
     
+    # Carré contenu
     if content:
         content_rect = pygame.Rect(margin, content_top + 120, W - margin*2, H - content_top - 160)
         draw_rounded_rect(surface, WHITE, content_rect, 15)
         pygame.draw.rect(surface, BORDER_COLOR, content_rect, 3, border_radius=15)
         
-        font_content = pygame.font.SysFont("Arial", 28)
-        draw_text_wrapped(surface, content, content_rect, font_content, BLACK)
+        if slide_type == "list":
+            # Mode liste avec défilement
+            font_content = pygame.font.SysFont("Arial", 24)
+            draw_scrolling_list(surface, content, content_rect, font_content, BLACK, scroll_offset)
+        else:
+            # Mode normal
+            font_content = pygame.font.SysFont("Arial", 28)
+            draw_text_wrapped(surface, content, content_rect, font_content, BLACK)
     
     return surface
+
+def calculate_scroll_height(text, rect_height, font):
+    """Calcule la hauteur totale du texte pour le scroll"""
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    line_height = font.get_height() + 12
+    total_height = len(lines) * line_height
+    return max(0, total_height - rect_height + 60)
 
 def slide_transition(old_surface, new_surface):
     """Animation de transition vers la gauche"""
@@ -237,27 +278,47 @@ def run_slides():
 
     slides = load_slides()
     current_index = 0
-
-    # >>> PATCH: flag pour un seul reload par cycle
     reload_done = False
+    
+    # Variables pour le scroll
+    scroll_offset = 0
+    max_scroll = 0
 
-    current_surface = draw_slide_surface(slides[current_index])
+    current_surface = draw_slide_surface(slides[current_index], scroll_offset)
     
     while True:
-
-        # >>> PATCH: ne reload que quand on recommence au début
         if current_index == 0 and not reload_done:
             slides = load_slides()
             reload_done = True
 
         slide = slides[current_index]
         duration = slide.get("duration", 8)
+        slide_type = slide.get("type", "normal")
+        
+        # Calculer le scroll si c'est une liste
+        if slide_type == "list":
+            W, H = screen.get_width(), screen.get_height()
+            content_rect = pygame.Rect(40, 220, W - 80, H - 260)
+            font_content = pygame.font.SysFont("Arial", 24)
+            max_scroll = calculate_scroll_height(
+                slide.get("content", ""),
+                content_rect.height,
+                font_content
+            )
+        else:
+            max_scroll = 0
+            scroll_offset = 0
         
         start_time = time.time()
         
         while time.time() - start_time < duration:
             elapsed = time.time() - start_time
             progress = elapsed / duration
+            
+            # Défilement automatique pour les listes
+            if slide_type == "list" and max_scroll > 0:
+                scroll_offset = int((elapsed / duration) * max_scroll)
+                current_surface = draw_slide_surface(slide, scroll_offset)
             
             screen.blit(current_surface, (0, 0))
             draw_header()
@@ -279,21 +340,21 @@ def run_slides():
                             screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
                         else:
                             screen = pygame.display.set_mode((1280, 720))
-                        current_surface = draw_slide_surface(slide)
+                        current_surface = draw_slide_surface(slide, scroll_offset)
                     
                     elif event.key == pygame.K_n:
-                        start_time = 0  
+                        start_time = 0
             
             pygame.display.flip()
             clock.tick(60)
         
         next_index = (current_index + 1) % len(slides)
 
-        # >>> PATCH: si on revient à la 1ère slide, autoriser reload
         if next_index == 0:
             reload_done = False
         
-        next_surface = draw_slide_surface(slides[next_index])
+        scroll_offset = 0
+        next_surface = draw_slide_surface(slides[next_index], 0)
         slide_transition(current_surface, next_surface)
         
         current_surface = next_surface
@@ -321,10 +382,16 @@ def save():
         total_text = data.get("title", "") + " " + data.get("content", "")
         data["duration"] = calculate_duration(total_text)
         
+        # Durée plus longue pour les listes
+        if data.get("type") == "list":
+            lines = len([l for l in data.get("content", "").split('\n') if l.strip()])
+            data["duration"] = max(10, min(45, 8 + lines * 0.8))
+        
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         
-        return {"status": "ok"}
+        word_count = len(total_text.split())
+        return {"status": "ok", "duration": data["duration"], "words": word_count}
         
     except Exception as e:
         return {"status": "error", "message": str(e)}, 500
