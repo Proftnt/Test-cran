@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendrier - Affichage Collège</title>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #F5F5F5;
+    font-family: Arial, sans-serif;
+    padding: 15px;
+}
+
+.header {
+    background: #1E3A8A;
+    color: white;
+    padding: 20px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.logo {
+    height: 45px;
+}
+
+.title-main {
+    font-size: 22px;
+    font-weight: bold;
+    flex: 1;
+    text-align: center;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.btn-nav {
+    flex: 1;
+    padding: 15px;
+    background: white;
+    border: 2px solid #1E3A8A;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.btn-nav:hover {
+    background: #E0F2FE;
+}
+
+.section {
+    background: white;
+    padding: 30px;
+    border: 2px solid #DDD;
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: 22px;
+    color: #1E3A8A;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #1E3A8A;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.day-column {
+    border: 2px solid #1E3A8A;
+    padding: 15px;
+}
+
+.day-header {
+    font-weight: bold;
+    font-size: 18px;
+    color: #1E3A8A;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.day-date {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.absence-list {
+    min-height: 100px;
+    font-size: 14px;
+}
+
+.absence-item {
+    padding: 8px;
+    background: #FEE2E2;
+    border-left: 3px solid #DC2626;
+    margin-bottom: 8px;
+}
+
+.event-item {
+    padding: 8px;
+    background: #DBEAFE;
+    border-left: 3px solid #3B82F6;
+    margin-bottom: 8px;
+}
+
+.no-data {
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.form-input, .form-select {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #CCC;
+    font-size: 14px;
+}
+
+.btn-add {
+    padding: 10px 20px;
+    background: #10B981;
+    color: white;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-add:hover {
+    background: #059669;
+}
+
+.week-separator {
+    height: 2px;
+    background: #1E3A8A;
+    margin: 10px 0;
+}
+
+.clubs-grid {
+    display: grid;
+    grid-template-columns: 120px repeat(5, 1fr);
+    gap: 2px;
+    background: #CCC;
+    border: 2px solid #1E3A8A;
+}
+
+.time-slot, .club-cell {
+    background: white;
+    padding: 10px;
+    min-height: 50px;
+}
+
+.time-slot {
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    background: #F0F9FF;
+}
+
+.club-cell {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.club-cell:hover {
+    background: #F0F9FF;
+}
+
+.club-cell.has-club {
+    background: #DBEAFE;
+    font-weight: bold;
+}
+
+.message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #10B981;
+    color: white;
+    padding: 15px 25px;
+    font-weight: bold;
+    z-index: 1000;
+}
+
+.message.error {
+    background: #DC2626;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <img class="logo" src="https://image-parcours.copainsdavant.com/image/750/2089415238/4294409.jpg" alt="Logo">
+    <h1 class="title-main">Calendrier</h1>
+    <button onclick="window.location.href='/'" style="padding: 10px 20px; background: #DC2626; color: white; border: none; font-weight: bold; cursor: pointer;">Retour</button>
+</div>
+
+<div class="container">
+    <div class="nav-buttons">
+        <button class="btn-nav" onclick="showSection('absences')">📅 Absences</button>
+        <button class="btn-nav" onclick="showSection('events')">🎉 Événements</button>
+        <button class="btn-nav" onclick="showSection('clubs')">🎨 Clubs</button>
+    </div>
+    
+    <!-- Section Absences -->
+    <div class="section" id="section-absences">
+        <div class="section-title">Absences de la semaine</div>
+        
+        <div class="form-group">
+            <label class="form-label">Ajouter une absence</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px;">
+                <select id="absenceDay" class="form-select">
+                    <option>Lundi</option>
+                    <option>Mardi</option>
+                    <option>Mercredi</option>
+                    <option>Jeudi</option>
+                    <option>Vendredi</option>
+                </select>
+                <input type="text" id="absenceName" class="form-input" placeholder="Nom de l'élève">
+                <input type="text" id="absenceReason" class="form-input" placeholder="Raison (optionnel)">
+                <button class="btn-add" onclick="addAbsence()">Ajouter</button>
+            </div>
+        </div>
+        
+        <div class="calendar-grid" id="absencesGrid"></div>
+    </div>
+    
+    <!-- Section Événements -->
+    <div class="section" id="section-events" style="display: none;">
+        <div class="section-title">Événements à venir</div>
+        
+        <div class="form-group">
+            <label class="form-label">Ajouter un événement</label>
+            <div style="display: grid; grid-template-columns: 1fr 2fr auto; gap: 10px;">
+                <input type="date" id="eventDate" class="form-input">
+                <input type="text" id="eventName" class="form-input" placeholder="Nom de l'événement">
+                <button class="btn-add" onclick="addEvent()">Ajouter</button>
+            </div>
+        </div>
+        
+        <div class="calendar-grid" id="eventsGrid"></div>
+    </div>
+    
+    <!-- Section Clubs -->
+    <div class="section" id="section-clubs" style="display: none;">
+        <div class="section-title">Planning des clubs</div>
+        
+        <div class="clubs-grid" id="clubsGrid"></div>
+    </div>
+</div>
+
+<script>
+const timeSlots = [
+    "8:15 - 9:10",
+    "9:15 - 10:10",
+    "10:25 - 11:20",
+    "11:25 - 12:20",
+    "13:00 - 13:55",
+    "14:00 - 14:55",
+    "15:00 - 15:45",
+    "15:55 - 16:50"
+];
+
+const days = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
+
+function showMessage(text, isError = false) {
+    const msg = document.createElement("div");
+    msg.className = "message" + (isError ? " error" : "");
+    msg.textContent = text;
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 3000);
+}
+
+function showSection(section) {
+    document.getElementById('section-absences').style.display = 'none';
+    document.getElementById('section-events').style.display = 'none';
+    document.getElementById('section-clubs').style.display = 'none';
+    document.getElementById('section-' + section).style.display = 'block';
+    
+    if (section === 'absences') loadAbsences();
+    if (section === 'events') loadEvents();
+    if (section === 'clubs') loadClubs();
+}
+
+function getWeekDates() {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    
+    // Build rolling 5-day window starting from today (skip weekends)
+    const dates = [];
+    let dt = new Date(now);
+    
+    // If weekend, start from next Monday
+    if (dt.getDay() > 4) {
+        const daysUntilMonday = 7 - dt.getDay();
+        dt = new Date(dt);
+        dt.setDate(dt.getDate() + daysUntilMonday);
+    }
+    
+    // Collect 5 consecutive weekdays
+    while (dates.length < 5) {
+        if (dt.getDay() > 0 && dt.getDay() < 6) {
+            dates.push(new Date(dt));
+        }
+        dt.setDate(dt.getDate() + 1);
+    }
+    return dates;
+}
+
+function formatDate(date) {
+    return `${date.getDate()}/${date.getMonth() + 1}`;
+}
+
+function addAbsence() {
+    const day = document.getElementById('absenceDay').value;
+    const name = document.getElementById('absenceName').value.trim();
+    const reason = document.getElementById('absenceReason').value.trim();
+    
+    if (!name) {
+        showMessage('Veuillez entrer un nom', true);
+        return;
+    }
+    
+    fetch('/api/calendar/absence', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({day, name, reason})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            showMessage('Absence ajoutée');
+            document.getElementById('absenceName').value = '';
+            document.getElementById('absenceReason').value = '';
+            loadAbsences();
+        }
+    })
+    .catch(() => showMessage('Erreur', true));
+}
+
+function loadAbsences() {
+    fetch('/api/calendar/absences')
+        .then(response => response.json())
+        .then(data => {
+            const grid = document.getElementById('absencesGrid');
+            const dates = getWeekDates();
+            
+            grid.innerHTML = dates.map((date, i) => {
+                const dayName = days[i];
+                const absences = data[dayName] || [];
+                
+                return `
+                    <div class="day-column">
+                        <div class="day-header">${dayName}</div>
+                        <div class="day-date">${formatDate(date)}</div>
+                        ${absences.length === 0 ? 
+                            '<div class="no-data">Aucune absence saisie</div>' :
+                            absences.map((a, idx) => `
+                                <div class="absence-item">
+                                    ${a.name}${a.reason ? '<br><small>' + a.reason + '</small>' : ''}
+                                    <button onclick="deleteAbsence('${dayName}', ${idx})" style="float: right; background: #DC2626; color: white; border: none; padding: 2px 6px; cursor: pointer; border-radius: 3px;">✕</button>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                `;
+            }).join('');
+        });
+}
+
+function deleteAbsence(day, index) {
+    if (!confirm('Supprimer cette absence ?')) return;
+    
+    fetch('/api/calendar/absence/delete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({day, index})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            showMessage('Absence supprimée');
+            loadAbsences();
+        }
+    })
+    .catch(() => showMessage('Erreur', true));
+}
+
+function addEvent() {
+    const date = document.getElementById('eventDate').value;
+    const name = document.getElementById('eventName').value.trim();
+    
+    if (!date || !name) {
+        showMessage('Veuillez remplir tous les champs', true);
+        return;
+    }
+    
+    fetch('/api/calendar/event', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({date, name})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            showMessage('Événement ajouté');
+            document.getElementById('eventDate').value = '';
+            document.getElementById('eventName').value = '';
+            loadEvents();
+        }
+    })
+    .catch(() => showMessage('Erreur', true));
+}
+
+function loadEvents() {
+    fetch('/api/calendar/events')
+        .then(response => response.json())
+        .then(data => {
+            const grid = document.getElementById('eventsGrid');
+            const dates = getWeekDates();
+            
+            // Organize events by date
+            const eventsByDate = {};
+            dates.forEach(date => {
+                const dateStr = date.toISOString().split('T')[0];
+                eventsByDate[dateStr] = data.filter(e => e.date === dateStr);
+            });
+            
+            grid.innerHTML = dates.map((date, i) => {
+                const dayName = days[i];
+                const dateStr = date.toISOString().split('T')[0];
+                const events = eventsByDate[dateStr] || [];
+                
+                return `
+                    <div class="day-column">
+                        <div class="day-header">${dayName}</div>
+                        <div class="day-date">${formatDate(date)}</div>
+                        ${events.length === 0 ? 
+                            '<div class="no-data">Aucun événement</div>' :
+                            events.map(e => `
+                                <div class="event-item">${e.name}</div>
+                            `).join('')
+                        }
+                    </div>
+                `;
+            }).join('');
+        });
+}
+
+function loadClubs() {
+    fetch('/api/calendar/clubs')
+        .then(response => response.json())
+        .then(data => {
+            const grid = document.getElementById('clubsGrid');
+            
+            let html = '<div class="time-slot"></div>';
+            days.forEach(day => {
+                html += `<div class="time-slot">${day}</div>`;
+            });
+            
+            timeSlots.forEach((slot, slotIndex) => {
+                html += `<div class="time-slot">${slot}</div>`;
+                days.forEach((day, dayIndex) => {
+                    const key = `${day}-${slotIndex}`;
+                    const club = data[key] || '';
+                    html += `<div class="club-cell ${club ? 'has-club' : ''}" 
+                             onclick="editClub('${day}', ${slotIndex})">${club}</div>`;
+                });
+            });
+            
+            grid.innerHTML = html;
+        });
+}
+
+function editClub(day, slotIndex) {
+    const clubName = prompt(`Club pour ${day} ${timeSlots[slotIndex]}:`);
+    
+    if (clubName === null) return;
+    
+    fetch('/api/calendar/club', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({day, slot: slotIndex, name: clubName.trim()})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            showMessage(clubName.trim() ? 'Club ajouté' : 'Club supprimé');
+            loadClubs();
+        }
+    })
+    .catch(() => showMessage('Erreur', true));
+}
+
+// Load initial data
+loadAbsences();
+</script>
+
+</body>
+</html>

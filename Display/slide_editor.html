@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Affichage Collège — Éditeur</title>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #F5F5F5;
+    font-family: Arial, sans-serif;
+    padding: 15px;
+}
+
+.header {
+    background: #1E3A8A;
+    color: white;
+    padding: 20px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.logo {
+    height: 45px;
+}
+
+.title-main {
+    font-size: 22px;
+    font-weight: bold;
+    flex: 1;
+    text-align: center;
+}
+
+.clock-display {
+    font-size: 16px;
+    background: rgba(255,255,255,0.2);
+    padding: 8px 15px;
+    border-radius: 5px;
+}
+
+.tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.tab {
+    flex: 1;
+    padding: 15px;
+    background: white;
+    border: 2px solid #DDD;
+    border-bottom: none;
+    cursor: pointer;
+    font-weight: bold;
+    text-align: center;
+}
+
+.tab.active {
+    background: #1E3A8A;
+    color: white;
+    border-color: #1E3A8A;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.form-container {
+    background: white;
+    padding: 25px;
+    margin-bottom: 20px;
+    border: 2px solid #DDD;
+    border-top: none;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.form-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #CCC;
+    font-size: 16px;
+    font-family: Arial, sans-serif;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #1E3A8A;
+}
+
+.slide-name {
+    font-size: 14px;
+}
+
+.slide-title {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.slide-content {
+    min-height: 200px;
+    resize: vertical;
+    font-size: 16px;
+}
+
+.char-counter {
+    text-align: right;
+    font-size: 13px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.char-counter.warning {
+    color: #DC2626;
+    font-weight: bold;
+}
+
+.hint {
+    font-size: 13px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.slide-type-selector {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.type-option {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #CCC;
+    background: white;
+    cursor: pointer;
+    text-align: center;
+    font-weight: bold;
+    border-radius: 5px;
+}
+
+.type-option.active {
+    background: #1E3A8A;
+    color: white;
+    border-color: #1E3A8A;
+}
+
+.type-option:hover {
+    border-color: #1E3A8A;
+}
+
+.btn-save {
+    width: 100%;
+    padding: 15px;
+    background: #10B981;
+    color: white;
+    border: none;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.btn-save:hover {
+    background: #059669;
+}
+
+.template-section {
+    background: #F0F9FF;
+    border: 2px solid #1E3A8A;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.template-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #1E3A8A;
+    margin-bottom: 15px;
+}
+
+.btn-template {
+    width: 100%;
+    padding: 12px;
+    background: #3B82F6;
+    color: white;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
+
+.btn-template:hover {
+    background: #2563EB;
+}
+
+.slides-list {
+    background: white;
+    padding: 25px;
+    border: 2px solid #DDD;
+    border-top: none;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.slide-section {
+    margin-bottom: 30px;
+}
+
+.section-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #1E3A8A;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #1E3A8A;
+}
+
+.slide-item {
+    background: #F9FAFB;
+    border: 2px solid #E5E7EB;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.slide-info {
+    flex: 1;
+}
+
+.slide-title-text {
+    font-weight: bold;
+    font-size: 16px;
+    color: #111827;
+    margin-bottom: 5px;
+}
+
+.slide-filename {
+    font-size: 13px;
+    color: #6B7280;
+}
+
+.btn-delete {
+    padding: 8px 16px;
+    background: #DC2626;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.btn-delete:hover {
+    background: #B91C1C;
+}
+
+.empty-message {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+    font-style: italic;
+}
+
+.preview-container {
+    max-width: 900px;
+    margin: 30px auto;
+    background: #E0F2FE;
+    padding: 20px;
+    border: 2px solid #1E3A8A;
+}
+
+.preview-header {
+    background: #1E3A8A;
+    color: white;
+    padding: 15px 20px;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.preview-title {
+    background: white;
+    border: 3px solid #1E3A8A;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: left;
+}
+
+.preview-content {
+    background: white;
+    border: 3px solid #1E3A8A;
+    border-radius: 15px;
+    padding: 20px;
+    min-height: 150px;
+    font-size: 18px;
+    white-space: pre-wrap;
+}
+
+.preview-content.list-mode {
+    font-size: 16px;
+}
+
+.preview-empty {
+    color: #999;
+    font-style: italic;
+}
+
+.message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #10B981;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 5px;
+    font-weight: bold;
+    z-index: 1000;
+}
+
+.message.error {
+    background: #DC2626;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <img class="logo" src="https://image-parcours.copainsdavant.com/image/750/2089415238/4294409.jpg" alt="Logo">
+    <h1 class="title-main">Éditeur d'Affichage</h1>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <button onclick="window.location.href='/admin'" style="padding: 8px 16px; background: #F59E0B; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">⚙️ Admin</button>
+        <button onclick="logout()" style="padding: 8px 16px; background: #DC2626; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">🚪 Déconnexion</button>
+        <div class="clock-display" id="clock"></div>
+    </div>
+</div>
+
+<div class="tabs">
+    <div class="tab active" onclick="switchTab('create')">➕ Créer une slide</div>
+    <div class="tab" onclick="switchTab('manage')">📋 Gérer les slides</div>
+    <div class="tab" onclick="window.location.href='/calendar'">📅 Calendrier</div>
+</div>
+
+<div id="tab-create" class="tab-content active">
+    <div class="form-container">
+        <h2 style="margin-bottom: 20px; color: #1E3A8A;">Créer une nouvelle slide</h2>
+        
+        <div class="template-section">
+            <div class="template-title">📌 Templates rapides</div>
+            <button class="btn-template" onclick="applyTemplate('tablets')">
+                📱 Récupération tablettes ATI
+            </button>
+            <button class="btn-template" onclick="applyTemplate('info')">
+                ℹ️ Information standard
+            </button>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Nom du fichier (pour enregistrer)</label>
+            <input type="text" id="slideName" class="form-input slide-name" placeholder="Ex: information_cantine">
+            <div class="hint">Ce nom est uniquement pour identifier votre slide dans les fichiers</div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Titre de l'information (max 100 caractères)</label>
+            <input type="text" id="slideTitle" class="form-input slide-title" placeholder="Ex: Information cantine - Lundi 11 novembre" maxlength="100">
+            <div class="char-counter" id="titleCounter">0 / 100 caractères</div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Type d'affichage</label>
+            <div class="slide-type-selector">
+                <div class="type-option active" data-type="normal" onclick="selectType('normal')">
+                    📄 Texte normal
+                </div>
+                <div class="type-option" data-type="list" onclick="selectType('list')">
+                    📝 Liste (défilement)
+                </div>
+            </div>
+            <div class="hint" id="typeHint">Pour un texte classique</div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Contenu de l'information (max 500 caractères)</label>
+            <textarea id="slideContent" class="form-input slide-content" placeholder="Écrivez votre message ici...&#10;&#10;Pour une liste, mettez un nom par ligne." maxlength="500"></textarea>
+            <div class="char-counter" id="contentCounter">0 / 500 caractères</div>
+            <div class="hint" id="wordCounter">0 mots • Durée estimée: 5 secondes</div>
+        </div>
+        
+        <button class="btn-save" onclick="saveSlide()">💾 Enregistrer la slide</button>
+    </div>
+
+    <div class="preview-container">
+        <div class="preview-header">📺 Aperçu de l'affichage</div>
+        <div class="preview-title" id="previewTitle">Information collège</div>
+        <div class="preview-content" id="previewContent">
+            <span class="preview-empty">Votre contenu apparaîtra ici...</span>
+        </div>
+    </div>
+</div>
+
+<div id="tab-manage" class="tab-content">
+    <div class="slides-list">
+        <div class="slide-section">
+            <div class="section-title">🎓 Slides de présentation (preset)</div>
+            <div id="presetList"></div>
+        </div>
+        
+        <div class="slide-section">
+            <div class="section-title">📝 Vos slides personnalisées</div>
+            <div id="customList"></div>
+        </div>
+        
+        <button class="btn-save" onclick="loadSlides()" style="margin-top: 20px;">🔄 Actualiser la liste</button>
+    </div>
+</div>
+
+<script>
+let currentType = "normal";
+
+function logout() {
+    fetch('/api/logout', {method: 'POST'})
+        .then(() => window.location.href = '/login')
+        .catch(() => window.location.href = '/login');
+}
+
+function updateClock() {
+    const now = new Date();
+    const days = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+    const months = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+    const h = String(now.getHours()).padStart(2, "0");
+    const m = String(now.getMinutes()).padStart(2, "0");
+    document.getElementById("clock").textContent = 
+        `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} - ${h}:${m}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+function switchTab(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    
+    if (tabName === 'create') {
+        document.querySelectorAll('.tab')[0].classList.add('active');
+        document.getElementById('tab-create').classList.add('active');
+    } else {
+        document.querySelectorAll('.tab')[1].classList.add('active');
+        document.getElementById('tab-manage').classList.add('active');
+        loadSlides();
+    }
+}
+
+function showMessage(text, isError = false) {
+    const msg = document.createElement("div");
+    msg.className = "message" + (isError ? " error" : "");
+    msg.textContent = text;
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 3000);
+}
+
+function calculateDuration(text, type) {
+    if (type === "list") {
+        const lines = text.split('\n').filter(l => l.trim()).length;
+        return Math.max(10, Math.min(45, 8 + lines * 0.8));
+    }
+    const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+    const duration = 5 + (words * 0.5);
+    return Math.max(5, Math.min(30, duration));
+}
+
+function selectType(type) {
+    currentType = type;
+    document.querySelectorAll('.type-option').forEach(opt => {
+        opt.classList.remove('active');
+    });
+    document.querySelector(`[data-type="${type}"]`).classList.add('active');
+    
+    const hint = document.getElementById('typeHint');
+    const contentArea = document.getElementById('slideContent');
+    
+    if (type === 'list') {
+        hint.textContent = "Pour une liste défilante : mettez un élément par ligne";
+        contentArea.placeholder = "Entrez chaque nom sur une ligne différente:\n\nDupont Jean\nMartin Sophie\nDurand Pierre\n...";
+    } else {
+        hint.textContent = "Pour un texte classique";
+        contentArea.placeholder = "Écrivez votre message ici...\n\nMaximum 500 caractères.";
+    }
+    
+    updatePreview();
+}
+
+function applyTemplate(templateName) {
+    if (templateName === 'tablets') {
+        document.getElementById('slideName').value = 'tablettes_ati';
+        document.getElementById('slideTitle').value = 'Récupération tablettes ATI';
+        document.getElementById('slideContent').value = 'Les élèves suivants peuvent récupérer leur tablette à l\'ATI:\n\nDupont Jean\nMartin Sophie\nDurand Pierre';
+        selectType('list');
+    } else if (templateName === 'info') {
+        document.getElementById('slideName').value = 'information';
+        document.getElementById('slideTitle').value = 'Information du collège';
+        document.getElementById('slideContent').value = 'Écrivez votre information ici...';
+        selectType('normal');
+    }
+    
+    updatePreview();
+    document.getElementById('titleCounter').textContent = document.getElementById('slideTitle').value.length + ' / 100 caractères';
+    document.getElementById('contentCounter').textContent = document.getElementById('slideContent').value.length + ' / 500 caractères';
+    
+    const text = document.getElementById('slideContent').value;
+    const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+    const duration = calculateDuration(text, currentType);
+    document.getElementById('wordCounter').textContent = 
+        `${words} mot${words > 1 ? 's' : ''} • Durée estimée: ${duration.toFixed(1)} secondes`;
+}
+
+document.getElementById("slideTitle").addEventListener("input", function() {
+    const length = this.value.length;
+    const counter = document.getElementById("titleCounter");
+    counter.textContent = `${length} / 100 caractères`;
+    
+    if (length >= 90) {
+        counter.classList.add("warning");
+    } else {
+        counter.classList.remove("warning");
+    }
+    
+    updatePreview();
+});
+
+document.getElementById("slideContent").addEventListener("input", function() {
+    const text = this.value;
+    const length = text.length;
+    const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+    const duration = calculateDuration(text, currentType);
+    
+    const contentCounter = document.getElementById("contentCounter");
+    contentCounter.textContent = `${length} / 500 caractères`;
+    
+    if (length >= 450) {
+        contentCounter.classList.add("warning");
+    } else {
+        contentCounter.classList.remove("warning");
+    }
+    
+    document.getElementById("wordCounter").textContent = 
+        `${words} mot${words > 1 ? 's' : ''} • Durée estimée: ${duration.toFixed(1)} secondes`;
+    
+    updatePreview();
+});
+
+function updatePreview() {
+    const title = document.getElementById("slideTitle").value.trim();
+    const content = document.getElementById("slideContent").value.trim();
+    
+    document.getElementById("previewTitle").textContent = 
+        title || "Information collège";
+    
+    const previewContent = document.getElementById("previewContent");
+    
+    if (content) {
+        if (currentType === 'list') {
+            const lines = content.split('\n').filter(l => l.trim());
+            previewContent.innerHTML = lines.map(l => `• ${l.trim()}`).join('<br>');
+            previewContent.classList.add('list-mode');
+        } else {
+            previewContent.innerHTML = content.replace(/\n/g, '<br>');
+            previewContent.classList.remove('list-mode');
+        }
+        previewContent.classList.remove("preview-empty");
+    } else {
+        previewContent.innerHTML = '<span class="preview-empty">Votre contenu apparaîtra ici...</span>';
+        previewContent.classList.remove('list-mode');
+    }
+}
+
+function saveSlide() {
+    const name = document.getElementById("slideName").value.trim() || "slide_" + Date.now();
+    const title = document.getElementById("slideTitle").value.trim();
+    const content = document.getElementById("slideContent").value.trim();
+    
+    if (!content) {
+        showMessage("⚠️ Veuillez entrer un contenu", true);
+        return;
+    }
+    
+    const data = {
+        name: name,
+        title: title,
+        content: content,
+        type: currentType
+    };
+    
+    fetch("/save", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        showMessage(`✓ Slide sauvegardée (${result.duration.toFixed(1)}s)`);
+        
+        document.getElementById("slideName").value = "";
+        document.getElementById("slideTitle").value = "";
+        document.getElementById("slideContent").value = "";
+        document.getElementById("titleCounter").textContent = "0 / 100 caractères";
+        document.getElementById("contentCounter").textContent = "0 / 500 caractères";
+        document.getElementById("wordCounter").textContent = "0 mots • Durée estimée: 5 secondes";
+        selectType("normal");
+        updatePreview();
+    })
+    .catch(() => {
+        showMessage("✗ Erreur de sauvegarde", true);
+    });
+}
+
+function loadSlides() {
+    fetch("/list")
+        .then(response => response.json())
+        .then(data => {
+            const presetList = document.getElementById("presetList");
+            if (data.presets.length === 0) {
+                presetList.innerHTML = '<div class="empty-message">Aucune slide preset</div>';
+            } else {
+                presetList.innerHTML = data.presets.map(slide => `
+                    <div class="slide-item">
+                        <div class="slide-info">
+                            <div class="slide-title-text">${slide.title || slide.name}</div>
+                            <div class="slide-filename">${slide.filename}</div>
+                        </div>
+                        <button class="btn-delete" onclick="deleteSlide('preset', '${slide.filename}')">🗑️ Supprimer</button>
+                    </div>
+                `).join('');
+            }
+            
+            const customList = document.getElementById("customList");
+            if (data.custom.length === 0) {
+                customList.innerHTML = '<div class="empty-message">Aucune slide personnalisée</div>';
+            } else {
+                customList.innerHTML = data.custom.map(slide => `
+                    <div class="slide-item">
+                        <div class="slide-info">
+                            <div class="slide-title-text">${slide.title || slide.name}</div>
+                            <div class="slide-filename">${slide.filename}</div>
+                        </div>
+                        <button class="btn-delete" onclick="deleteSlide('custom', '${slide.filename}')">🗑️ Supprimer</button>
+                    </div>
+                `).join('');
+            }
+        })
+        .catch(() => {
+            showMessage("✗ Erreur de chargement", true);
+        });
+}
+
+function deleteSlide(type, filename) {
+    if (!confirm(`Voulez-vous vraiment supprimer "${filename}" ?`)) {
+        return;
+    }
+    
+    fetch(`/delete/${type}/${filename}`, {
+        method: "DELETE"
+    })
+    .then(response => response.json())
+    .then(() => {
+        showMessage("✓ Slide supprimée");
+        loadSlides();
+    })
+    .catch(() => {
+        showMessage("✗ Erreur de suppression", true);
+    });
+}
+</script>
+</body>
+</html>
