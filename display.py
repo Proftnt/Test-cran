@@ -1,13 +1,49 @@
-import os, json, pygame, time, datetime
+import datetime
+import json
+import logging
+import os
+import tempfile
+import threading
+import time
+
+import pygame
 from flask import Flask, request, send_file, jsonify
 
 # ================= Flask =================
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__, static_folder="static")
 
 CUSTOM_DIR = "custom_slides"
 PRESET_DIR = "preset_slides"
 os.makedirs(CUSTOM_DIR, exist_ok=True)
 os.makedirs(PRESET_DIR, exist_ok=True)
+
+FILE_LOCK = threading.RLock()
+ALLOWED_SLIDE_TYPES = {"normal", "list"}
+
+
+def _read_json_file(path):
+    with FILE_LOCK:
+        with open(path, encoding="utf-8") as file:
+            return json.load(file)
+
+
+def _atomic_write_json(path, data):
+    directory = os.path.dirname(path)
+    os.makedirs(directory, exist_ok=True)
+    fd, temp_path = tempfile.mkstemp(dir=directory, prefix="._tmp", suffix=".json")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as tmp_file:
+            json.dump(data, tmp_file, indent=2, ensure_ascii=False)
+            tmp_file.flush()
+            os.fsync(tmp_file.fileno())
+        with FILE_LOCK:
+            os.replace(temp_path, path)
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
 # Créer des slides de présentation par défaut
 def create_default_presets():
@@ -21,8 +57,7 @@ def create_default_presets():
             },
         ]
         for i, preset in enumerate(presets):
-            with open(f"{PRESET_DIR}/preset_{i+1}.json", "w", encoding="utf-8") as f:
-                json.dump(preset, f, indent=2, ensure_ascii=False)
+            _atomic_write_json(f"{PRESET_DIR}/preset_{i+1}.json", preset)
 
 create_default_presets()
 
@@ -69,14 +104,16 @@ def load_slides():
     preset_files = []
     for f in os.listdir(PRESET_DIR):
         if f.endswith(".json"):
+            path = f"{PRESET_DIR}/{f}"
             try:
-                with open(f"{PRESET_DIR}/{f}", encoding="utf-8") as file:
-                    data = json.load(file)
-                    data["is_preset"] = True
-                    data["filename"] = f
-                    preset_files.append(data)
-            except:
-                pass
+                data = _read_json_file(path)
+            except Exception as exc:
+                logger.warning("Failed to load preset slide %s: %s", path, exc)
+                continue
+
+            data["is_preset"] = True
+            data["filename"] = f
+            preset_files.append(data)
     
     preset_files.sort(key=lambda x: x.get("order", 999))
     slides.extend(preset_files)
@@ -84,22 +121,24 @@ def load_slides():
     # Puis charger les custom
     for f in sorted(os.listdir(CUSTOM_DIR)):
         if f.endswith(".json"):
+            path = f"{CUSTOM_DIR}/{f}"
             try:
-                with open(f"{CUSTOM_DIR}/{f}", encoding="utf-8") as file:
-                    data = json.load(file)
-                    data["is_preset"] = False
-                    data["filename"] = f
-                    
-                    if "title" in data:
-                        data["title"] = data["title"][:MAX_TITLE_CHARS]
-                    if "content" in data:
-                        data["content"] = data["content"][:MAX_CONTENT_CHARS]
-                    
-                    total_text = data.get("title", "") + " " + data.get("content", "")
-                    data["duration"] = calculate_duration(total_text)
-                    slides.append(data)
-            except:
-                pass
+                data = _read_json_file(path)
+            except Exception as exc:
+                logger.warning("Failed to load custom slide %s: %s", path, exc)
+                continue
+
+            data["is_preset"] = False
+            data["filename"] = f
+
+            if "title" in data:
+                data["title"] = data["title"][:MAX_TITLE_CHARS]
+            if "content" in data:
+                data["content"] = data["content"][:MAX_CONTENT_CHARS]
+
+            total_text = data.get("title", "") + " " + data.get("content", "")
+            data["duration"] = calculate_duration(total_text)
+            slides.append(data)
     
     if not slides:
         slides = [{
@@ -369,31 +408,43 @@ def index():
 @app.route("/save", methods=["POST"])
 def save():
     try:
-        data = request.get_json()
+        data = request.get_json(force=True, silent=True)
+        if not isinstance(data, dict):
+            return {"status": "error", "message": "Payload JSON invalide"}, 400
+
         name = data.get("name", "slide").replace(" ", "_")
         name = "".join(c for c in name if c.isalnum() or c in "._-")
+        if not name:
+            name = f"slide_{int(time.time())}"
         filename = f"{CUSTOM_DIR}/{name}.json"
-        
+
         if "title" in data:
             data["title"] = data["title"][:MAX_TITLE_CHARS]
         if "content" in data:
             data["content"] = data["content"][:MAX_CONTENT_CHARS]
-        
+
+        slide_type = data.get("type", "normal")
+        if slide_type not in ALLOWED_SLIDE_TYPES:
+            logger.warning("Received unsupported slide type '%s', falling back to 'normal'", slide_type)
+            slide_type = "normal"
+        data["type"] = slide_type
+
         total_text = data.get("title", "") + " " + data.get("content", "")
         data["duration"] = calculate_duration(total_text)
-        
+
         # Durée plus longue pour les listes
         if data.get("type") == "list":
             lines = len([l for l in data.get("content", "").split('\n') if l.strip()])
             data["duration"] = max(10, min(45, 8 + lines * 0.8))
-        
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        
+
+        _atomic_write_json(filename, data)
+        logger.info("Saved slide %s", filename)
+
         word_count = len(total_text.split())
         return {"status": "ok", "duration": data["duration"], "words": word_count}
-        
+
     except Exception as e:
+        logger.exception("Failed to save slide")
         return {"status": "error", "message": str(e)}, 500
 
 @app.route("/list", methods=["GET"])
@@ -402,32 +453,36 @@ def list_slides():
     
     for f in os.listdir(PRESET_DIR):
         if f.endswith(".json"):
+            path = f"{PRESET_DIR}/{f}"
             try:
-                with open(f"{PRESET_DIR}/{f}", encoding="utf-8") as file:
-                    data = json.load(file)
-                    result["presets"].append({
-                        "filename": f,
-                        "name": f[:-5],
-                        "title": data.get("title", ""),
-                        "order": data.get("order", 999)
-                    })
-            except:
-                pass
+                data = _read_json_file(path)
+            except Exception as exc:
+                logger.warning("Failed to list preset slide %s: %s", path, exc)
+                continue
+
+            result["presets"].append({
+                "filename": f,
+                "name": f[:-5],
+                "title": data.get("title", ""),
+                "order": data.get("order", 999)
+            })
     
     result["presets"].sort(key=lambda x: x["order"])
     
     for f in os.listdir(CUSTOM_DIR):
         if f.endswith(".json"):
+            path = f"{CUSTOM_DIR}/{f}"
             try:
-                with open(f"{CUSTOM_DIR}/{f}", encoding="utf-8") as file:
-                    data = json.load(file)
-                    result["custom"].append({
-                        "filename": f,
-                        "name": f[:-5],
-                        "title": data.get("title", "")
-                    })
-            except:
-                pass
+                data = _read_json_file(path)
+            except Exception as exc:
+                logger.warning("Failed to list custom slide %s: %s", path, exc)
+                continue
+
+            result["custom"].append({
+                "filename": f,
+                "name": f[:-5],
+                "title": data.get("title", "")
+            })
     
     return jsonify(result)
 
@@ -439,12 +494,16 @@ def delete_slide(slide_type, filename):
         else:
             filepath = f"{CUSTOM_DIR}/{filename}"
         
-        if os.path.exists(filepath):
-            os.remove(filepath)
-            return {"status": "ok"}
-        else:
-            return {"status": "error", "message": "Fichier non trouvé"}, 404
+        with FILE_LOCK:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            else:
+                return {"status": "error", "message": "Fichier non trouvé"}, 404
+
+        logger.info("Deleted %s slide %s", slide_type, filename)
+        return {"status": "ok"}
     except Exception as e:
+        logger.exception("Failed to delete %s slide %s", slide_type, filename)
         return {"status": "error", "message": str(e)}, 500
 
 if __name__ == "__main__":
